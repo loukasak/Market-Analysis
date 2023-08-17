@@ -1,12 +1,12 @@
 from keys import repo_path
 from config import bad_symbols
 from request import send_public_request, send_signed_request
+from typing import Any
 from matplotlib import pyplot as plt
 from datetime import datetime as dt
 from time import time as current_time
 from os import listdir, devnull
-from numpy import poly1d, polyfit, mean, array, repeat, sqrt as npsqrt, RankWarning, sum as npsum, amax, amin, empty, where, diff, sign
-from numpy.linalg import LinAlgError
+from numpy import poly1d, polyfit, mean, array, repeat, sqrt as npsqrt, sum as npsum, amax, amin, empty, where, diff, sign
 from numpy.ma import masked_where, make_mask
 from numpy.random import uniform, seed as randomseed
 from math import isnan, isinf, ceil
@@ -24,11 +24,11 @@ filterwarnings("ignore", category=ResourceWarning)
 # CONTENTS:
 # COLOURS
 # TIME
-# RESOURCE MANAGEMENT
-# PRICE DATA
-# ASSETS & SYMBOLS
 # DATA MANIPULATION
 # DATA VISUALISATION
+# RESOURCE MANAGEMENT
+# MARKET DATA
+# ASSETS & SYMBOLS
 
 #==============================================================================
 # COLOURS
@@ -471,7 +471,7 @@ def timestamp2hours(timestamp:int, t0:int) -> float:
 #==============================================================================
 # DATA MANIPULATION
 
-def append(arr:list, value, length:int) -> array:
+def append(arr:list, value:Any, length:int) -> array:
     """
     Appends value to arr, returns a numpy array
 
@@ -483,9 +483,8 @@ def append(arr:list, value, length:int) -> array:
     arr : list-like
         The list-like object to which value is appended
         Can be any sliceable list-like object
-    value : any
+    value : Any
         The value appended to arr
-        Can be any type
     length : int
         The length of the final array after value is appended i.e. len(arr) + 1
 
@@ -672,8 +671,8 @@ def percentage_array(arr:array, zero_point:float) -> array:
 
 def amplitude(values:array, width:float=None) -> float:
     """
-    The amplitude of the array values, calculated as the distance covered by
-    the data normalised by the number of data points or given width
+    Returns the amplitude of the array values, calculated as the distance
+    covered by the data normalised by the number of data points or given width
 
     Parameters
     ----------
@@ -697,8 +696,25 @@ def amplitude(values:array, width:float=None) -> float:
 
 def amplitude2(values:array, width:float, length:int) -> float:
     """
+    Returns the amplitude of the array values, calculated as the distance
+    covered by the data normalised by the number of data points or given width
+
     The same as amplitude but with mandatory width and length parameters for
     faster execution
+
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose amplitude is to be calculated
+    width : float
+        The normalisation factor for the amplitude calculation
+    length : int
+        The length of the array values
+
+    Returns
+    -------
+    float
+        The amplitude of the array values normalised by width
     """
 
     subtractee = append(values[1:], values[-1], length)
@@ -706,7 +722,23 @@ def amplitude2(values:array, width:float, length:int) -> float:
 
 def distance(values:array, length:int) -> float:
     """
-    The same as amplitude2 but without scaling by the width
+    Returns the total distance covered by all adjacent values in the array
+    values
+
+    The same as amplitude2 but without width normalisation
+
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose distance is to be calculated
+    length : int
+        The length of the array values
+
+    Returns
+    -------
+    float
+        The total distance covered by all adjacent values in the array
+        values
     """
 
     subtractee = append(values[1:], values[-1], length)
@@ -714,10 +746,21 @@ def distance(values:array, length:int) -> float:
 
 def variance(values:array, width:float=None) -> float:
     """
-    Returns the variance of the array values, normalised by width
+    Returns the variance of the array values normalised by width
 
-    The same as amplitude but the distances covered between each data point
-    pair is squared
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose variance is to be calculated
+    width : float, optional
+        The normalisation factor for the variance calculation
+        The number of data points in values is used if width is None
+        The default is None
+
+    Returns
+    -------
+    float
+        The variance of the array values normalised by width
     """
 
     L = len(values)
@@ -727,65 +770,273 @@ def variance(values:array, width:float=None) -> float:
 
 def variance2(values:array, width:float, length:int) -> float:
     """
+    Returns the variance of the array values normalised by width
+
     The same as variance but with mandatory width and length parameters for
     faster execution
+
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose variance is to be calculated
+    width : float
+        The normalisation factor for the amplitude calculation
+    length : int
+        The length of the array values
+
+    Returns
+    -------
+    float
+        The variance of the array values normalised by width
     """
 
     subtractee = append(values[1:], values[-1], length)
     return npsum((values-subtractee)**2)/width
 
-# returns the true volatility of a data series
-# assumes values is a numpy array of numbers
-def volatility(values, width=0):
+def volatility(values:array, width:float=None) -> float:
+    """
+    Returns the true volatility of the array values normalised by width
+
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose volatility is to be calculated
+    width : float, optional
+        The normalisation factor for the variance calculation
+        The number of data points in values is used if width is None
+        The default is None
+
+    Returns
+    -------
+    float
+        The true volatility of the array values normalised by width
+    """
+
     return npsqrt(variance(values, width))
 
-# returns the variance of a data series as a percentage
-# assumes values is a numpy array of numbers
-# formerly calculated as:   sum([(percentage_values[i]-percentage_values[i+1])**2 for i in range(len(percentage_values)-1)])/width
-def variance_percentage(values, width=0):
+def variance_percentage(values:array, width:float=None) -> float:
+    """
+    Returns the variance of the array values as a percentage normalised by
+    width
+
+    Percentage values are calculated relative to the first element in values
+
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose percentage variance is to be
+        calculated
+    width : float, optional
+        The normalisation factor for the variance calculation
+        The number of data points in values is used if width is None
+        The default is None
+
+    Returns
+    -------
+    float
+        The percentage variance of the array values normalised by width
+    """
+
     L = len(values)
-    width = width if width else L
+    width = L if width is None else width
     percentage_values = percentage_array(values, values[0])
     subtractee = append(percentage_values[1:], percentage_values[-1], L)
     return npsum((percentage_values-subtractee)**2)/width
 
-# returns the volatilty of a data series as a percentage
-# assumes values is a numpy array of numbers
-def volatility_percentage(values, width=0):
+def volatility_percentage(values:array, width:float=None) -> float:
+    """
+    Returns the volatility of the array values as a percentage normalised by
+    width
+
+    Percentage values are calculated relative to the first element in values
+
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose percentage volatility is to be
+        calculated
+    width : float, optional
+        The normalisation factor for the variance calculation
+        The number of data points in values is used if width is None
+        The default is None
+
+    Returns
+    -------
+    float
+        The percentage volatility of the array values normalised by width
+    """
+
     return npsqrt(variance_percentage(values, width))
 
-# returns the variance of a data series ignoring spikes larger than threshold*amplitude
-def variance_percentage_clipped(x, values, width, high_threshold=1.5, low_threshold=0.2):
-    width = width if width else len(values)
-    bf = best_fit(x, values)                                                                                                  # compute best fit of values
-    amp = amplitude(values)                                                                                                   # compute amplitude of values
-    clipped_values = array([values[i] if abs(bf[i]-values[i])<high_threshold*amp else bf[i] for i in range(len(values))])     # replace anomalous values with the corresponding point in the best fit
-    return variance_percentage(clipped_values, width)                                                                         # return variance percentage of clipped values
+def variance_percentage_clipped(x:array, values:array, width:float=None, spike_scale:float=1.5) -> float:
+    """
+    Returns the variance of the array values as a percentage normalised by
+    width neglecting large anomalous spikes
 
-# returns the volatility of a data series ignoring spikes larger than threshold*amplitude (defined in variance_percentage_clipped)
-def volatility_percentage_clipped(x, values):
-    return npsqrt(variance_percentage_clipped(x, values, width=0))
+    Anomalous spikes are determined by the product of the amplitude of the
+    array values and spike_scale
 
-# returns the given dictionary sorted by value in ascending order
-def dsort_ascending(d):
+    Parameters
+    ----------
+    x : array
+        The array of x values corresponding to the array values
+    values : array
+        The numpy array of numbers whose clipped percentage variance is to be
+        calculated
+    width : float, optional
+        The normalisation factor for the variance calculation
+        The number of data points in values is used if width is None
+        The default is None
+    spike_scale : float, optional
+        The scale factor by which the amplitude is multiplied to determine the
+        deviation threshold for anomalous points
+        The default is 1.5
+
+    Returns
+    -------
+    float
+        The clipped percentage variance of the array values normalised by width
+    """
+
+    L = len(values)
+    width = L if width is None else width
+    bf = best_fit(x, values)
+    amp = amplitude(values, width)
+    # replace anomalous values with the corresponding point in the best fit
+    clipped_values = array([values[i] if abs(bf[i]-values[i])<spike_scale*amp else bf[i] for i in range(L)])
+    return variance_percentage(clipped_values, width)
+
+def volatility_percentage_clipped(x:array, values:array, width:float=None, spike_scale:float=1.5) -> float:
+    """
+    Returns the volatility of the array values as a percentage normalised by
+    width neglecting large anomalous spikes
+
+    Anomalous spikes are determined by the product of the amplitude of the
+    array values and spike_scale
+
+    Parameters
+    ----------
+    x : array
+        The array of x values corresponding to the array values
+    values : array
+        The numpy array of numbers whose clipped percentage volatility is to be
+        calculated
+    width : float, optional
+        The normalisation factor for the variance calculation
+        The number of data points in values is used if width is None
+        The default is None
+    spike_scale : float, optional
+        The scale factor by which the amplitude is multiplied to determine the
+        deviation threshold for anomalous points
+        The default is 1.5
+
+    Returns
+    -------
+    float
+        The clipped percentage volatility of the array values normalised by
+        width
+    """
+
+    return npsqrt(variance_percentage_clipped(x, values, width, spike_scale))
+
+def dsort_ascending(d:dict) -> dict:
+    """
+    Returns the dictionary d sorted by value in ascending order
+
+    Parameters
+    ----------
+    d : dict
+        A dictionary with number values
+
+    Returns
+    -------
+    dict
+        The dictionary d sorted by value in ascending orders
+    """
+
     return {k: v for k, v in sorted(d.items(), key=lambda item: item[1])}
 
-# returns the given dictionary sorted by value in descending order
-def dsort_descending(d):
+def dsort_descending(d:dict) -> dict:
+    """
+    Returns the dictionary d sorted by value in descending order
+
+    Parameters
+    ----------
+    d : dict
+        A dictionary with number values
+
+    Returns
+    -------
+    dict
+        The dictionary d sorted by value in descending orders
+    """
+
     return {k: v for k, v in reversed(sorted(d.items(), key=lambda item: item[1]))}
 
-# returns the key with the smallest value in the given dictionary
-def min_from_dict(d):
+def min_from_dict(d:dict) -> Any:
+    """
+    Returns the key with the smallest corresponding value in the dictionary d
+
+    Parameters
+    ----------
+    d : dict
+        A dictionary with number values
+
+    Returns
+    -------
+    Any
+        The key with the smallest corresponding value in the dictionary d
+    """
+
     return list(d.keys())[list(d.values()).index(min(d.values()))]
 
-# returns the key with the largest value in the given dictionary
-def max_from_dict(d):
+def max_from_dict(d:dict) -> Any:
+    """
+    Returns the key with the largest corresponding value in the dictionary d
+
+    Parameters
+    ----------
+    d : dict
+        A dictionary with number values
+
+    Returns
+    -------
+    Any
+        The key with the largest corresponding value in the dictionary d
+    """
+
     return list(d.keys())[list(d.values()).index(max(d.values()))]
 
-# returns a frequency dictionary for the given values
-def frequency(values, freq=None):
-    freq = freq if freq else {}
-    assert isinstance(freq, dict), "freq must be a dictionary"
+def frequency(values:list, freq:dict=None) -> dict:
+    """
+    Returns a dictionary of the elements in the array values as keys mapped to
+    their occurrence frequency
+
+    An existing frequency dictionary (technically any dictionary) can be
+    passed, to which value frequencies will be added
+
+    Parameters
+    ----------
+    values : list
+        An iterable whose element occurrence frequencies are to be counted
+    freq : dict, optional
+        An existing frequency dictionary to add occurrence frequencies to
+        The default is None
+
+    Raises
+    ------
+    TypeError
+        If a non-dictionary is passed as freq
+
+    Returns
+    -------
+    dict
+        A frequency dictionary
+    """
+
+    freq = {} if freq is None else freq
+    if not isinstance(freq, dict):
+        raise TypeError("freq must be a dictionary")
     for val in values:
         try:
             freq[val] += 1
@@ -793,9 +1044,36 @@ def frequency(values, freq=None):
             freq[val] = 1
     return freq
 
-# returns a dictionary containing the number of instances of each value in the given dictionary
-def value_frequency(d):
-    freq = {}
+def value_frequency(d:dict, freq:dict=None) -> dict:
+    """
+    Returns a dictionary of the values in the dictionary as keys mapped to
+    their occurrence frequency
+
+    An existing frequency dictionary (technically any dictionary) can be
+    passed, to which value frequencies will be added
+
+    Parameters
+    ----------
+    d : dict
+        A dictionary whose value occurrence frequencies are to be counted
+    freq : dict, optional
+        An existing frequency dictionary to add occurrence frequencies to
+        The default is None
+
+    Raises
+    ------
+    TypeError
+        If a non-dictionary is passed as freq
+
+    Returns
+    -------
+    dict
+        A frequency dictionary
+    """
+
+    freq = {} if freq is None else freq
+    if not isinstance(freq, dict):
+        raise TypeError("freq must be a dictionary")
     for val in d.values():
         try:
             freq[val] += 1
@@ -803,33 +1081,99 @@ def value_frequency(d):
             freq[val] = 1
     return freq
 
-# returns a dictionary containing lists of the values of each key contained in the give list of dictionaries
-# requires the listed dictionaries to contain the same keys
-def collect_keys(list_of_dicts):
+def collect_keys(list_of_dicts:list) -> dict:
+    """
+    Returns a dictionary in which keys are mapped to the list of values to
+    which they map in all dictionaries in list_of_dicts
+
+    Requires all dictionaries in list_of_dicts to contain the same keys
+
+    Parameters
+    ----------
+    list_of_dicts : list
+        A list of dictionaries with identical keys
+
+    Returns
+    -------
+    dict
+        A dictionary in which keys are mapped to the list of values to
+        which they map in all dictionaries in list_of_dicts
+    """
+
     D = {key:[] for key in list_of_dicts[0]}
     for d in list_of_dicts:
         for key in d:
             D[key].append(d[key])
     return D
 
-# returns the indices of the elements directly before the turning points in 'seq'
-def turning_points(seq):
+def turning_points(seq:array) -> array:
+    """
+    Returns the array of indices directly before turning points in the array
+    seq i.e. a point at which the gradient of the data is zero
+
+    Parameters
+    ----------
+    seq : array
+        An array-like sequence of numbers
+
+    Returns
+    -------
+    array
+        The array of indices directly before turning points
+    """
+
     return where(diff(sign(diff(seq))))[0]
 
-# returns the linspace with the same limits and one more element than old_linspace
-# assumes old_linspace is a linspace containing length-1 elements
-def quick_linspace(old_linspace, length):
+def quick_linspace(old_linspace:array, length:int) -> array:
+    """
+    Returns the linspace with the same limits and one more element than
+    old_linspace
+
+    Significantly faster than creating a new linspace from scratch
+
+    Parameters
+    ----------
+    old_linspace : array
+        A numpy array of numbers, assumed to be a linspace containing
+        length - 1 elements
+    length : int
+        The final length of the new linspace i.e. len(old_linspace) + 1
+
+    Returns
+    -------
+    array
+        The linspace with the same limits and one more element than
+        old_linspace
+    """
+
     return append(old_linspace*(length-2)/(length-1), old_linspace[-1], length)
 
-# returns a list of arrays of length 'length' containing sequential elements from array 'arr'
-def divide_array(arr, length):
+def divide_array(arr:array, length:int) -> list:
+    """
+    Returns a list of arrays each of length 'length' containing sequential
+    elements from array arr
+
+    Parameters
+    ----------
+    arr : array
+        The array-like object to divide into smaller arrays
+    length : int
+        The maximum length of each smaller array
+
+    Returns
+    -------
+    list
+        A list of arrays of length 'length' containing sequential elements
+        from array arr
+    """
+
     segments = ceil(len(arr)/length)
     return [arr[i*length:(i+1)*length] for i in range(segments)]
 
-#========================================================================================================================================================================================
+#==============================================================================
 # DATA VISUALISATION
 
-#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # INTERNAL FUNCTIONS
 
 # the grid dimensions for each subplot arrangement
@@ -1087,7 +1431,7 @@ def json_to_dict(filename):
     return d
 
 #========================================================================================================================================================================================
-# PRICE DATA
+# MARKET DATA
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # HISTORICAL KLINES
