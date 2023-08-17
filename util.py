@@ -165,14 +165,14 @@ def valid_timestamp(timestamp:int) -> bool:
 
     return isinstance(timestamp, int) and len(str(timestamp)) == 13
 
-def minutes_ago(minutes:int|float, end:int=None) -> int:
+def minutes_ago(minutes:float, end:int=None) -> int:
     """
     Returns the UTC unix timestamp in milliseconds for the given number of
     minutes ago from 'end'
 
     Parameters
     ----------
-    minutes : int|float
+    minutes : float
         The number of minutes prior to end the timestamp should define
     end : int, optional
         The timestamp from which the previous minutes are taken
@@ -195,14 +195,14 @@ def minutes_ago(minutes:int|float, end:int=None) -> int:
         raise ValueError("invalid timestamp: {}".format(end))
     return int(end - minutes*6e4)     # *6e4 to convert minutes to milliseconds
 
-def hours_ago(hours:int|float, end:int=None) -> int:
+def hours_ago(hours:float, end:int=None) -> int:
     """
     Returns the UTC unix timestamp in milliseconds for the given number of
     hours ago from 'end'
 
     Parameters
     ----------
-    hours : int|float
+    hours : float
         The number of hours prior to end the timestamp should define
     end : int, optional
         The timestamp from which the previous hours are taken
@@ -225,14 +225,14 @@ def hours_ago(hours:int|float, end:int=None) -> int:
         raise ValueError("invalid timestamp: {}".format(end))
     return int(end - hours*3.6e6)    # *3.6e6 to convert hours to milliseconds
 
-def days_ago(days:int|float, end:int=None) -> int:
+def days_ago(days:float, end:int=None) -> int:
     """
     Returns the UTC unix timestamp in milliseconds for the given number of
     days ago from 'end'
 
     Parameters
     ----------
-    days : int|float
+    days : float
         The number of days prior to end the timestamp should define
     end : int, optional
         The timestamp from which the previous days are taken
@@ -255,14 +255,14 @@ def days_ago(days:int|float, end:int=None) -> int:
         raise ValueError("invalid timestamp: {}".format(end))
     return int(end - days*8.64e7)    # *8.64e7 to convert days to milliseconds
 
-def weeks_ago(weeks:int|float, end:int=None) -> int:
+def weeks_ago(weeks:float, end:int=None) -> int:
     """
     Returns the UTC unix timestamp in milliseconds for the given number of
     weeks ago from 'end'
 
     Parameters
     ----------
-    days : int|float
+    days : float
         The number of weeks prior to end the timestamp should define
     end : int, optional
         The timestamp from which the previous weeks are taken
@@ -285,7 +285,7 @@ def weeks_ago(weeks:int|float, end:int=None) -> int:
         raise ValueError("invalid timestamp: {}".format(end))
     return int(end - weeks*6.046e8)     # *6.046e8 to convert weeks to milliseconds
 
-def months_ago(months:int|float, end:int=None) -> int:
+def months_ago(months:float, end:int=None) -> int:
     """
     Returns the UTC unix timestamp in milliseconds for the given number of
     months ago from 'end'
@@ -293,7 +293,7 @@ def months_ago(months:int|float, end:int=None) -> int:
 
     Parameters
     ----------
-    days : int|float
+    days : float
         The number of months prior to end the timestamp should define
     end : int, optional
         The timestamp from which the previous months are taken
@@ -316,7 +316,7 @@ def months_ago(months:int|float, end:int=None) -> int:
         raise ValueError("invalid timestamp: {}".format(end))
     return int(end - months*2.6298e9)    # *2.6298e9 to convert months to milliseconds
 
-def years_ago(years:int|float, end:int=None) -> int:
+def years_ago(years:float, end:int=None) -> int:
     """
     Returns the UTC unix timestamp in milliseconds for the given number of
     years ago from 'end'
@@ -324,7 +324,7 @@ def years_ago(years:int|float, end:int=None) -> int:
 
     Parameters
     ----------
-    days : int|float
+    days : float
         The number of years prior to end the timestamp should define
     end : int, optional
         The timestamp from which the previous years are taken
@@ -467,6 +467,534 @@ def timestamp2hours(timestamp:int, t0:int) -> float:
     """
 
     return (timestamp-t0)/3600000
+
+#==============================================================================
+# DATA MANIPULATION
+
+def append(arr:list, value, length:int) -> array:
+    """
+    Appends value to arr, returns a numpy array
+
+    Used in practice to append values to a numpy array quickly
+    The length of the array must be known and passed
+
+    Parameters
+    ----------
+    arr : list-like
+        The list-like object to which value is appended
+        Can be any sliceable list-like object
+    value : any
+        The value appended to arr
+        Can be any type
+    length : int
+        The length of the final array after value is appended i.e. len(arr) + 1
+
+    Returns
+    -------
+    array
+        arr with value appended as a numpy array
+    """
+
+    a = empty(length)
+    a[:length-1] = arr
+    a[-1] = value
+    return a
+
+def clip(N:float, low:float, high:float) -> float:
+    """
+    Clips the value N to be in the range low <= N <= high if it isn't already
+
+    Parameters
+    ----------
+    N : float
+        The value to clip
+    low : float
+        The lower limit
+    high : float
+        The upper limit
+
+    Returns
+    -------
+    float
+        The clipped value, either low, high, or N
+    """
+
+    return low if N<low else high if N>high else N
+
+def binary_min(a:float, b:float) -> float:
+    """
+    Returns the smaller of a and b
+
+    Parameters
+    ----------
+    a : float
+        The first number
+    b : float
+        The second number
+
+    Returns
+    -------
+    float
+        The smaller of a and b
+    """
+
+    return a if a < b else b
+
+def binary_max(a:float, b:float) -> float:
+    """
+    Returns the larger of a and b
+
+    Parameters
+    ----------
+    a : float
+        The first number
+    b : float
+        The second number
+
+    Returns
+    -------
+    float
+        The larger of a and b
+    """
+
+    return a if a > b else b
+
+def normalise(values:array) -> array:
+    """
+    Returns the array values normalised between 0 and 1
+
+    Parameters
+    ----------
+    values : array
+        A numpy array of numbers
+
+    Returns
+    -------
+    array
+        The array values normalised between 0 and 1
+    """
+
+    minv = amin(values)
+    maxv = amax(values)
+    if minv == maxv:
+        return values/minv
+    return (values-minv)/(maxv-minv)
+
+def std(values:array, m:float=None) -> float:
+    """
+    Returns the standard deviation of the array values
+
+    Parameters
+    ----------
+    values : array
+        A numpy array of numbers
+    m : float, optional
+        An alternative mean value around which to calculate the standard
+        deviation instead of the actual mean of the data
+        The default is None.
+
+    Returns
+    -------
+    float
+        The standard deviation of the array values
+    """
+
+    m = mean(values) if m is None else m
+    return npsqrt(npsum((values-m)**2)/len(values))
+
+def best_fit(x:array, y:array, order:int=1, w:array=None) -> array:
+    """
+    Returns the line (or curve if order>1) of best-fit through the given data,
+    x y, as an array
+
+    Parameters
+    ----------
+    x : array
+        Array-like object of x values
+    y : array
+        Array-like object of y values
+    order : int, optional
+        The order of the polynomial best fit
+        The default is 1
+    w : array, optional
+        Weights to apply to each x-y pair in the sequence
+        The default is None
+
+    Returns
+    -------
+    array
+        Array of best fit values
+    """
+
+    if len(y) == 1:
+        return y
+    return poly1d(polyfit(x, y, order, w=w))(x)
+
+def percentage_change(value:float, zero_point:float) -> float:
+    """
+    Returns the percentage change of value relative to zero_point
+
+    Parameters
+    ----------
+    value : float
+        The value whose percentage change from zero_point is to be calculated
+    zero_point : float
+        The value from which the percentage change is calculated
+
+    Returns
+    -------
+    float
+        The percentage change of value from zero_point
+    """
+
+    return 100*(value-zero_point)/zero_point
+
+def percentage_array(arr:array, zero_point:float) -> array:
+    """
+    Returns a numpy array of percentage changes from zero_point corresponding
+    to each value in arr
+
+    Parameters
+    ----------
+    arr : array
+        A numpy array whose percentage changes from zero_point is to be
+        calculated
+    zero_point : float
+        The value from which the percentage changes are calculated
+
+    Returns
+    -------
+    array
+        The numpy array of percentage changes from zero_point
+    """
+
+    return 100*(arr-zero_point)/zero_point
+
+def amplitude(values:array, width:float=None) -> float:
+    """
+    The amplitude of the array values, calculated as the distance covered by
+    the data normalised by the number of data points or given width
+
+    Parameters
+    ----------
+    values : array
+        The numpy array of numbers whose amplitude is to be calculated
+    width : float, optional
+        The normalisation factor for the amplitude calculation
+        The number of data points in values is used if width is None
+        The default is None
+
+    Returns
+    -------
+    float
+        The amplitude of the array values normalised by width
+    """
+
+    L = len(values)
+    width = L if width is None else width
+    subtractee = append(values[1:], values[-1], L)
+    return npsum(abs(values-subtractee))/width
+
+def amplitude2(values:array, width:float, length:int) -> float:
+    """
+    The same as amplitude but with mandatory width and length parameters for
+    faster execution
+    """
+
+    subtractee = append(values[1:], values[-1], length)
+    return npsum(abs(values-subtractee))/width
+
+def distance(values:array, length:int) -> float:
+    """
+    The same as amplitude2 but without scaling by the width
+    """
+
+    subtractee = append(values[1:], values[-1], length)
+    return npsum(abs(values-subtractee))
+
+def variance(values:array, width:float=None) -> float:
+    """
+    Returns the variance of the array values, normalised by width
+
+    The same as amplitude but the distances covered between each data point
+    pair is squared
+    """
+
+    L = len(values)
+    width = L if width is None else width
+    subtractee = append(values[1:], values[-1], L)
+    return npsum((values-subtractee)**2)/width
+
+def variance2(values:array, width:float, length:int) -> float:
+    """
+    The same as variance but with mandatory width and length parameters for
+    faster execution
+    """
+
+    subtractee = append(values[1:], values[-1], length)
+    return npsum((values-subtractee)**2)/width
+
+# returns the true volatility of a data series
+# assumes values is a numpy array of numbers
+def volatility(values, width=0):
+    return npsqrt(variance(values, width))
+
+# returns the variance of a data series as a percentage
+# assumes values is a numpy array of numbers
+# formerly calculated as:   sum([(percentage_values[i]-percentage_values[i+1])**2 for i in range(len(percentage_values)-1)])/width
+def variance_percentage(values, width=0):
+    L = len(values)
+    width = width if width else L
+    percentage_values = percentage_array(values, values[0])
+    subtractee = append(percentage_values[1:], percentage_values[-1], L)
+    return npsum((percentage_values-subtractee)**2)/width
+
+# returns the volatilty of a data series as a percentage
+# assumes values is a numpy array of numbers
+def volatility_percentage(values, width=0):
+    return npsqrt(variance_percentage(values, width))
+
+# returns the variance of a data series ignoring spikes larger than threshold*amplitude
+def variance_percentage_clipped(x, values, width, high_threshold=1.5, low_threshold=0.2):
+    width = width if width else len(values)
+    bf = best_fit(x, values)                                                                                                  # compute best fit of values
+    amp = amplitude(values)                                                                                                   # compute amplitude of values
+    clipped_values = array([values[i] if abs(bf[i]-values[i])<high_threshold*amp else bf[i] for i in range(len(values))])     # replace anomalous values with the corresponding point in the best fit
+    return variance_percentage(clipped_values, width)                                                                         # return variance percentage of clipped values
+
+# returns the volatility of a data series ignoring spikes larger than threshold*amplitude (defined in variance_percentage_clipped)
+def volatility_percentage_clipped(x, values):
+    return npsqrt(variance_percentage_clipped(x, values, width=0))
+
+# returns the given dictionary sorted by value in ascending order
+def dsort_ascending(d):
+    return {k: v for k, v in sorted(d.items(), key=lambda item: item[1])}
+
+# returns the given dictionary sorted by value in descending order
+def dsort_descending(d):
+    return {k: v for k, v in reversed(sorted(d.items(), key=lambda item: item[1]))}
+
+# returns the key with the smallest value in the given dictionary
+def min_from_dict(d):
+    return list(d.keys())[list(d.values()).index(min(d.values()))]
+
+# returns the key with the largest value in the given dictionary
+def max_from_dict(d):
+    return list(d.keys())[list(d.values()).index(max(d.values()))]
+
+# returns a frequency dictionary for the given values
+def frequency(values, freq=None):
+    freq = freq if freq else {}
+    assert isinstance(freq, dict), "freq must be a dictionary"
+    for val in values:
+        try:
+            freq[val] += 1
+        except KeyError:
+            freq[val] = 1
+    return freq
+
+# returns a dictionary containing the number of instances of each value in the given dictionary
+def value_frequency(d):
+    freq = {}
+    for val in d.values():
+        try:
+            freq[val] += 1
+        except KeyError:
+            freq[val] = 1
+    return freq
+
+# returns a dictionary containing lists of the values of each key contained in the give list of dictionaries
+# requires the listed dictionaries to contain the same keys
+def collect_keys(list_of_dicts):
+    D = {key:[] for key in list_of_dicts[0]}
+    for d in list_of_dicts:
+        for key in d:
+            D[key].append(d[key])
+    return D
+
+# returns the indices of the elements directly before the turning points in 'seq'
+def turning_points(seq):
+    return where(diff(sign(diff(seq))))[0]
+
+# returns the linspace with the same limits and one more element than old_linspace
+# assumes old_linspace is a linspace containing length-1 elements
+def quick_linspace(old_linspace, length):
+    return append(old_linspace*(length-2)/(length-1), old_linspace[-1], length)
+
+# returns a list of arrays of length 'length' containing sequential elements from array 'arr'
+def divide_array(arr, length):
+    segments = ceil(len(arr)/length)
+    return [arr[i*length:(i+1)*length] for i in range(segments)]
+
+#========================================================================================================================================================================================
+# DATA VISUALISATION
+
+#------------------------------------------------------------------------------------------------------------
+# INTERNAL FUNCTIONS
+
+# the grid dimensions for each subplot arrangement
+subplot_arrangement_dimensions = {1:(1,1), 2:(1,2), 3:(2,2), 4:(2,2), 5:(2,3), 6:(2,3), 7:(3,3), 8:(3,3), 9:(3,3)}
+lsad = len(subplot_arrangement_dimensions)
+
+# the figsize for each subplot arrangement
+subplot_arrangement_figsizes = {1:array([6,5]),
+                                2:array([9,4]),
+                                3:array([9,7]), 4:array([9,7]),
+                                5:array([11,6]), 6:array([11,6]),
+                                7:array([11,8]), 8:array([11,8]), 9:array([11,8])}
+
+# get a predetermined arrangement of subplots
+def get_subplot_arrangement(subplots, figsize=None, dpi=None, scale=1, fontsize=None):
+    assert isinstance(subplots, int) and 0 < subplots <= lsad, "'subplots' must be an integer from 1 to {}".format(lsad)
+    figsize = figsize if figsize else subplot_arrangement_figsizes[subplots]*scale          # determine figure size - either passed into function call or default retrieved from global variable
+    if isinstance(fontsize,(int,float)):                                                    # change the fontsize if a number was given
+        plt.rcParams.update({'font.size': fontsize})                                        # change font size
+    dim = subplot_arrangement_dimensions[subplots]                                          # get subplot grid dimensions
+    fig = plt.figure(figsize=figsize, dpi=dpi)                   # initialise figure
+    axes = []                                                    # initialise list to contain subplots
+    i = 0                                                        # variable i is used to determine if the specified number of subplots have been created
+    for row in range(dim[0]):                                    # iterate through number of rows specified by the dimension
+        for column in range(dim[1]):                             # for each row, iterate through number of columns specified by the dimension
+            axes.append(plt.subplot2grid(dim,(row,column)))      # create an empty subplot at this position in the figure
+            i += 1                                               # increment i
+            if i == subplots:
+                break                                            # break the loop once the specified number of subplots has been created
+    return fig, axes                                             # return the figure and the list of subplots axes
+
+# plot timeprice data onta a given subplot axis
+def axplot(ax, timeprices, symbol, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+    # data preparation
+    times, prices = zip(*timeprices.items())                                                         # timeprice separation
+    times, time_label = reasonable_times(times)                                                      # get reasonably formatted times with a time label
+    if symbol:
+        base, quote = split_symbol(symbol)
+        title_symbol = base+'-'+quote
+        price_symbol = base+'/'+quote
+    else:
+        title_symbol, price_symbol = '[SYMBOL]', 'SYMBOL'
+    # main axis
+    ax.plot(times, prices, label='Absolute Price', color='tab:blue')               # plot absoulte price line
+    ax.set_title(title_symbol+' Price')                                                              # set plot title
+    ax.set_xlabel("Time ({})".format(time_label))                                                    # set x-axis label
+    ax.set_ylabel("Price ({})".format(price_symbol))                                                 # set y-axis label
+    ax.set_xlim(times[0], 0)                                                                         # set x-axis limits
+    axylim1, axylim2 = get_y_axis_limits(prices)                                                     # compute y-axis limits
+    ax.set_ylim(axylim1, axylim2)                                                                    # set y-axis limits
+    # best fit
+    if show_best_fit:
+         ax.plot(times, best_fit(times, prices), label="Av. Price", color='tab:orange')      # plot best fit line
+    # percentage axis
+    if show_percentage:
+        percentage_prices = percentage_array(array(prices), prices[0])    # compute percentage changes in the absolute prices relative to the first price
+        p_mask = mask_all(percentage_prices)                             # mask the percentage prices i.e. make them invisible
+        ax2 = ax.twinx()                                                 # create secondary y-axis
+        ax2.plot(times, p_mask)                                          # plot masked percentage prices
+        ax2.set_ylabel("% Change")                                       # set secondary y-axis label
+        ax2ylim1, ax2ylim2 = get_y_axis_limits(percentage_prices)        # compute secondary y-axis limits
+        ax2.set_ylim(ax2ylim1, ax2ylim2)                                 # set secondary y-axis limits
+        ax2.grid(axis='y')                                               # add horizontal grid lines at the percentage ticks
+        ax.set_zorder(ax2.get_zorder()+1)                                # plot percentage axis elements behind main axis (including grid lines)
+        ax.set_frame_on(False)                                           # needed to make the percentage axis elements visible after setting the z-order
+    else:
+        ax.grid(axis='y')                                                # add horizontal grid lines at the absolute price ticks if not using a percentage axis
+    # amplitude
+    if show_amplitude:
+        amp = amplitude(prices)                                                                                                      # compute amplitdue
+        ax.plot(times, array(best_fit(times, prices))+amp, label="Amplitude", color='tab:green', linestyle='dashed')      # plot upper amplitude line
+        ax.plot(times, array(best_fit(times, prices))-amp, color='tab:green', linestyle='dashed')                         # plot lower amplitude line
+    # legend
+    if show_legend:
+        ax.legend()       # show a legend
+    return
+
+# returns a tuple containing the lower and upper y-axis limits, respectively, for the given y values
+# smaller pad gives more padding (I know it's confusing)
+def get_y_axis_limits(y, pad=10):
+    miny = min(y)                                                              # compute lowest price (to set the y-axis limit)
+    maxy = max(y)                                                              # compute highest price (to set the y-axis limit)
+    axylim1 = ((pad+1)*miny-maxy)/pad      # lower y-axis limit - expressions equal to min(y)-(amp/pad), where amp = max(y)-min(y)
+    axylim2 = ((pad+1)*maxy-miny)/pad      # upper y-axis limit - expressions equal to max(y)+(amp/pad), where amp = max(y)-min(y)
+    return axylim1, axylim2
+
+# masks all points in values, apart from the first and last, so that they may be plotted invisible
+def mask_all(values):
+    m = repeat(True, len(values))
+    m[0], m[-1] = False, False
+    return masked_where(m, array(values))
+
+# masks all zeros in 'values'
+def mask_zeros(values):
+    v = array(values)
+    m = ~make_mask(v)
+    return masked_where(m, v)
+
+# returns a reasonably formatted list of times corresponding to the time period between the given timestamps
+def reasonable_times(times, zero_index=-1):
+    delta = times[-1] - times[0]                                # data period in milliseconds
+    time_label, divider = _appropriate_time_interval_(delta)    # compute reasonable scale for x axis
+    times = (array(times) - times[zero_index])/divider          # rescale x values
+    return times, time_label
+
+# returns the interval name and scale factor for the given time delta (in milliseconds)
+# only used by reasonable_times(), don't worry about it
+def _appropriate_time_interval_(delta):
+    if delta < 1e7:
+        return ('minutes', 6e4)       # no. milliseconds in a minute
+    elif delta < 2*1e8:
+        return ('hours', 3.6e6)       # no. milliseconds in an hour
+    elif delta < 2*1e9:
+        return ('days', 8.64e7)       # no. milliseconds in a day
+    elif delta < 1e10:
+        return ('weeks', 6.048e8)     # no. milliseconds in a week
+    else:
+        return ('months', 2.6298e9)   # no. milliseconds in a month
+    return
+
+#------------------------------------------------------------------------------------------------------------
+# USER FUNCTIONS
+
+# plots the given timeprices with optional line of best fit, percentage axis, amplitude, and legend
+def plot(timeprices, symbol='', show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+    fig, axes = get_subplot_arrangement(1, figsize)                                                       # get a figure with a single subplot
+    axplot(axes[0], timeprices, symbol, show_best_fit, show_percentage, show_amplitude, show_legend)      # plot the timeprice data on the one subplot
+    fig.tight_layout()                                                                                    # make it tight
+    return
+
+# plots the given set of symbol:timeprice stored in Timeprices with optional line of best fit, percentage axis, amplitude, and legend
+def plot_multiple(Timeprices, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+    assert len(Timeprices) <= lsad, "Too many symbols - must be no more than {}".format(lsad)
+    fig, axes = get_subplot_arrangement(len(Timeprices), figsize)                                                # get a figure with the correct number of subplots
+    for symbol, ax in zip(Timeprices,axes):                                                                      # associate each symbol in Timeprices with a subplot and iterate through the pairs
+        axplot(ax, Timeprices[symbol], symbol, show_best_fit, show_percentage, show_amplitude, show_legend)      # plot the timeprice data on its corresponding subplot
+    fig.tight_layout()                                                                                           # make it tight
+    return
+
+# plots the 'subplots' most volatile USDT/BUSD symbols and returns the clipped percentage volatility for all USDT/BUSD symbols
+# SHOULD PROBABLY SEPARATE THE TIMEPRICE AND VOLATILITY CALCULATIONS INTO SEPARATE FUNCTIONS
+def plot_most_volatile(subplots=9, timeprices=None, interval='1m', start=minutes_ago(60), end=None, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+    print("COMPUTING SYMBOL VOLATILITY...")
+    end = end if end else now()
+    symbols = get_hos_usd_symbols()
+    Timeprices = timeprices if any([timeprices]) else get_historical_prices_multi(symbols, interval, start, end)
+    vols = dsort_descending({symbol:volatility_percentage_clipped(list(Timeprices[symbol].keys()), list(Timeprices[symbol].values())) for symbol in Timeprices})
+    plot_vols(vols, Timeprices, subplots, show_best_fit, show_percentage, show_amplitude, show_legend, figsize)
+    return vols
+
+def plot_vols(vols, tps, subplots=9, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+    fig, axes = get_subplot_arrangement(subplots, figsize)
+    for symbol, ax in zip(list(vols)[:subplots],axes):                 # associate the first 'subplot' symbols in vols each with a subplot and iterate through the pairs
+        axplot(ax, tps[symbol], symbol, show_legend=False)      # plot the timeprice data on its corresponding subplot
+    fig.tight_layout()                                                 # make it tight
+    plt.show()
+
+# plots a histogram of the given data sequence
+def histogram(seq, bins='auto', rwidth=0.8, title=''):
+    hist_output = plt.hist(seq, bins=bins, rwidth=rwidth)
+    fig = plt.gcf()
+    fig.set_size_inches(9, 6)
+    plt.title(title)
+    plt.show()
+    return hist_output
 
 #========================================================================================================================================================================================
 # RESOURCE MANAGEMENT
@@ -1122,382 +1650,6 @@ def get_taker_commission(symbol):
 # returns bool whether quote quantity is allowed for market trading symbol
 def quote_order_qty_allowed(symbol):
     return {info['symbol']:info['quoteOrderQtyMarketAllowed'] for info in get_exchange_info()['symbols']}[symbol]
-
-#========================================================================================================================================================================================
-# DATA MANIPULATION
-
-# appends 'value' to 'arr', where 'length' is the length of the final array i.e. len(arr) + 1
-# returns a numpy array
-def append(arr, value, length):
-    a = empty(length)
-    a[:length-1] = arr
-    a[-1] = value
-    return a
-
-# clips the value 'N' to be in the range a <= N <= b if it isn't already
-def clip(N, a, b):
-    return a if N<a else b if N>b else N
-
-# returns the smaller of a and b
-def binary_min(a, b):
-    return a if a < b else b
-
-# returns the larger of a and b
-def binary_max(a, b):
-    return a if a > b else b
-
-# returns a normalised data set of 'values', between 0 and 1
-# assumes values is a numpy array of numbers
-def normalise(values):
-    minv = amin(values)
-    maxv = amax(values)
-    if minv == maxv:
-        return values/minv
-    return (values-minv)/(maxv-minv)
-
-# returns the standard deviation of the array of value
-# assumes arr is a numpy array of numbers
-# optional m (mean) parameter to use instead of the actual mean of the data
-def std(arr, m=None):
-    m = m if m else mean(arr)
-    return npsqrt(npsum((arr-m)**2)/len(arr))
-
-# returns the line (or curve if order>1) of best-fit, as a list, through the given data, x y
-def best_fit(x, y, order=1, w=None):
-    if len(y) == 1:
-        return y
-    return poly1d(polyfit(x, y, order, w=w))(x)
-
-# returs the best fit as defined above, flattened by the given 'flatten' factor, between 0 and 1; 0 given no flattening and 1 being completely flat
-def best_fit_flattened(x, y, flatten, order=1):
-    try:
-        g, c = polyfit(x, y, order)
-        g = g*(1-flatten)
-        c = c - (c-mean(y))*flatten
-        return poly1d((g,c))(x)           # use numpy function to compute best fit series
-    except LinAlgError as e:              # polyfit sometimes doesn't work perfectly but it isn't a problem overall so we can avoid the error
-        if len(y) == 1:
-            return y
-        else:
-            raise e
-    except RankWarning as e:          # runtime warning thrown usually when x and y are only 1 element long
-        if len(y) == 1:
-            return y
-        else:
-            raise e
-    return
-
-# returns a list of residuals corresponding to 'values', for which the gradient is zero
-def residuals(values):
-    bf = best_fit(values)                  # compute best fit to the data
-    res = []                               # initialise list to contain residual values
-    for i in range(len(values)):           # iterate through values
-        res.append(values[i] - bf[i])      # append residual value to res
-    return res
-
-# returns the percentage change of the given 'value' relative to the given zero-point percentage
-def percentage(value, zero_point):
-    return 100*(value-zero_point)/zero_point
-
-# returns a numpy array of percentage values for the given 'values' relative to the given zero-point percentage
-# assumes arr is a numpy array of numbers
-def percentage_array(arr, zero_point):
-    return 100*(arr-zero_point)/zero_point
-
-# computes the naive average amplitude of the given values
-# assumes values is a numpy array of numbers
-# formerly calculated as:   sum([abs(values[i]-values[i+1]) for i in range(len(values)-1)])/width   : does the same thing now but is a lot faster
-def amplitude(values, width=0):
-    L = len(values)
-    width = width if width else L
-    subtractee = append(values[1:], values[-1], L)
-    return npsum(abs(values-subtractee))/width
-
-# the same as amplitude but with mandatory width and length parameters for faster execution
-def amplitude2(values, width, length):
-    subtractee = append(values[1:], values[-1], length)
-    return npsum(abs(values-subtractee))/width
-
-# the same as amplitude2 but without scaling by the width
-def distance(values, length):
-    subtractee = append(values[1:], values[-1], length)
-    return npsum(abs(values-subtractee))
-
-# returns the true variance of a data series
-# assumes values is a numpy array of numbers
-# formerly calculated as:   sum([(values[i]-values[i+1])**2 for i in range(len(values)-1)])/width   : does the same thing now but is a lot faster
-def variance(values, width=0):
-    L = len(values)
-    width = width if width else L
-    subtractee = append(values[1:], values[-1], L)
-    return npsum((values-subtractee)**2)/width
-
-# the same as variance but with mandatory width and length parameters for faster execution
-def variance2(values, width, length):
-    subtractee = append(values[1:], values[-1], length)
-    return npsum((values-subtractee)**2)/width
-
-# returns the true volatility of a data series
-# assumes values is a numpy array of numbers
-def volatility(values, width=0):
-    return npsqrt(variance(values, width))
-
-# returns the variance of a data series as a percentage
-# assumes values is a numpy array of numbers
-# formerly calculated as:   sum([(percentage_values[i]-percentage_values[i+1])**2 for i in range(len(percentage_values)-1)])/width
-def variance_percentage(values, width=0):
-    L = len(values)
-    width = width if width else L
-    percentage_values = percentage_array(values, values[0])
-    subtractee = append(percentage_values[1:], percentage_values[-1], L)
-    return npsum((percentage_values-subtractee)**2)/width
-
-# returns the volatilty of a data series as a percentage
-# assumes values is a numpy array of numbers
-def volatility_percentage(values, width=0):
-    return npsqrt(variance_percentage(values, width))
-
-# returns the variance of a data series ignoring spikes larger than threshold*amplitude
-def variance_percentage_clipped(x, values, width, high_threshold=1.5, low_threshold=0.2):
-    width = width if width else len(values)
-    bf = best_fit(x, values)                                                                                                  # compute best fit of values
-    amp = amplitude(values)                                                                                                   # compute amplitude of values
-    clipped_values = array([values[i] if abs(bf[i]-values[i])<high_threshold*amp else bf[i] for i in range(len(values))])     # replace anomalous values with the corresponding point in the best fit
-    return variance_percentage(clipped_values, width)                                                                         # return variance percentage of clipped values
-
-# returns the volatility of a data series ignoring spikes larger than threshold*amplitude (defined in variance_percentage_clipped)
-def volatility_percentage_clipped(x, values):
-    return npsqrt(variance_percentage_clipped(x, values, width=0))
-
-# returns the given dictionary sorted by value in ascending order
-def dsort_ascending(d):
-    return {k: v for k, v in sorted(d.items(), key=lambda item: item[1])}
-
-# returns the given dictionary sorted by value in descending order
-def dsort_descending(d):
-    return {k: v for k, v in reversed(sorted(d.items(), key=lambda item: item[1]))}
-
-# returns the key with the smallest value in the given dictionary
-def min_from_dict(d):
-    return list(d.keys())[list(d.values()).index(min(d.values()))]
-
-# returns the key with the largest value in the given dictionary
-def max_from_dict(d):
-    return list(d.keys())[list(d.values()).index(max(d.values()))]
-
-# returns a frequency dictionary for the given values
-def frequency(values, freq=None):
-    freq = freq if freq else {}
-    assert isinstance(freq, dict), "freq must be a dictionary"
-    for val in values:
-        try:
-            freq[val] += 1
-        except KeyError:
-            freq[val] = 1
-    return freq
-
-# returns a dictionary containing the number of instances of each value in the given dictionary
-def value_frequency(d):
-    freq = {}
-    for val in d.values():
-        try:
-            freq[val] += 1
-        except KeyError:
-            freq[val] = 1
-    return freq
-
-# returns a dictionary containing lists of the values of each key contained in the give list of dictionaries
-# requires the listed dictionaries to contain the same keys
-def collect_keys(list_of_dicts):
-    D = {key:[] for key in list_of_dicts[0]}
-    for d in list_of_dicts:
-        for key in d:
-            D[key].append(d[key])
-    return D
-
-# returns the indices of the elements directly before the turning points in 'seq'
-def turning_points(seq):
-    return where(diff(sign(diff(seq))))[0]
-
-# returns the linspace with the same limits and one more element than old_linspace
-# assumes old_linspace is a linspace containing length-1 elements
-def quick_linspace(old_linspace, length):
-    return append(old_linspace*(length-2)/(length-1), old_linspace[-1], length)
-
-# returns a list of arrays of length 'length' containing sequential elements from array 'arr'
-def divide_array(arr, length):
-    segments = ceil(len(arr)/length)
-    return [arr[i*length:(i+1)*length] for i in range(segments)]
-
-#========================================================================================================================================================================================
-# DATA VISUALISATION
-
-#------------------------------------------------------------------------------------------------------------
-# INTERNAL FUNCTIONS
-
-# the grid dimensions for each subplot arrangement
-subplot_arrangement_dimensions = {1:(1,1), 2:(1,2), 3:(2,2), 4:(2,2), 5:(2,3), 6:(2,3), 7:(3,3), 8:(3,3), 9:(3,3)}
-lsad = len(subplot_arrangement_dimensions)
-
-# the figsize for each subplot arrangement
-subplot_arrangement_figsizes = {1:array([6,5]),
-                                2:array([9,4]),
-                                3:array([9,7]), 4:array([9,7]),
-                                5:array([11,6]), 6:array([11,6]),
-                                7:array([11,8]), 8:array([11,8]), 9:array([11,8])}
-
-# get a predetermined arrangement of subplots
-def get_subplot_arrangement(subplots, figsize=None, dpi=None, scale=1, fontsize=None):
-    assert isinstance(subplots, int) and 0 < subplots <= lsad, "'subplots' must be an integer from 1 to {}".format(lsad)
-    figsize = figsize if figsize else subplot_arrangement_figsizes[subplots]*scale          # determine figure size - either passed into function call or default retrieved from global variable
-    if isinstance(fontsize,(int,float)):                                                    # change the fontsize if a number was given
-        plt.rcParams.update({'font.size': fontsize})                                        # change font size
-    dim = subplot_arrangement_dimensions[subplots]                                          # get subplot grid dimensions
-    fig = plt.figure(figsize=figsize, dpi=dpi)                   # initialise figure
-    axes = []                                                    # initialise list to contain subplots
-    i = 0                                                        # variable i is used to determine if the specified number of subplots have been created
-    for row in range(dim[0]):                                    # iterate through number of rows specified by the dimension
-        for column in range(dim[1]):                             # for each row, iterate through number of columns specified by the dimension
-            axes.append(plt.subplot2grid(dim,(row,column)))      # create an empty subplot at this position in the figure
-            i += 1                                               # increment i
-            if i == subplots:
-                break                                            # break the loop once the specified number of subplots has been created
-    return fig, axes                                             # return the figure and the list of subplots axes
-
-# plot timeprice data onta a given subplot axis
-def axplot(ax, timeprices, symbol, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
-    # data preparation
-    times, prices = zip(*timeprices.items())                                                         # timeprice separation
-    times, time_label = reasonable_times(times)                                                      # get reasonably formatted times with a time label
-    if symbol:
-        base, quote = split_symbol(symbol)
-        title_symbol = base+'-'+quote
-        price_symbol = base+'/'+quote
-    else:
-        title_symbol, price_symbol = '[SYMBOL]', 'SYMBOL'
-    # main axis
-    ax.plot(times, prices, label='Absolute Price', color='tab:blue')               # plot absoulte price line
-    ax.set_title(title_symbol+' Price')                                                              # set plot title
-    ax.set_xlabel("Time ({})".format(time_label))                                                    # set x-axis label
-    ax.set_ylabel("Price ({})".format(price_symbol))                                                 # set y-axis label
-    ax.set_xlim(times[0], 0)                                                                         # set x-axis limits
-    axylim1, axylim2 = get_y_axis_limits(prices)                                                     # compute y-axis limits
-    ax.set_ylim(axylim1, axylim2)                                                                    # set y-axis limits
-    # best fit
-    if show_best_fit:
-         ax.plot(times, best_fit(times, prices), label="Av. Price", color='tab:orange')      # plot best fit line
-    # percentage axis
-    if show_percentage:
-        percentage_prices = percentage_array(array(prices), prices[0])    # compute percentage changes in the absolute prices relative to the first price
-        p_mask = mask_all(percentage_prices)                             # mask the percentage prices i.e. make them invisible
-        ax2 = ax.twinx()                                                 # create secondary y-axis
-        ax2.plot(times, p_mask)                                          # plot masked percentage prices
-        ax2.set_ylabel("% Change")                                       # set secondary y-axis label
-        ax2ylim1, ax2ylim2 = get_y_axis_limits(percentage_prices)        # compute secondary y-axis limits
-        ax2.set_ylim(ax2ylim1, ax2ylim2)                                 # set secondary y-axis limits
-        ax2.grid(axis='y')                                               # add horizontal grid lines at the percentage ticks
-        ax.set_zorder(ax2.get_zorder()+1)                                # plot percentage axis elements behind main axis (including grid lines)
-        ax.set_frame_on(False)                                           # needed to make the percentage axis elements visible after setting the z-order
-    else:
-        ax.grid(axis='y')                                                # add horizontal grid lines at the absolute price ticks if not using a percentage axis
-    # amplitude
-    if show_amplitude:
-        amp = amplitude(prices)                                                                                                      # compute amplitdue
-        ax.plot(times, array(best_fit(times, prices))+amp, label="Amplitude", color='tab:green', linestyle='dashed')      # plot upper amplitude line
-        ax.plot(times, array(best_fit(times, prices))-amp, color='tab:green', linestyle='dashed')                         # plot lower amplitude line
-    # legend
-    if show_legend:
-        ax.legend()       # show a legend
-    return
-
-# returns a tuple containing the lower and upper y-axis limits, respectively, for the given y values
-# smaller pad gives more padding (I know it's confusing)
-def get_y_axis_limits(y, pad=10):
-    miny = min(y)                                                              # compute lowest price (to set the y-axis limit)
-    maxy = max(y)                                                              # compute highest price (to set the y-axis limit)
-    axylim1 = ((pad+1)*miny-maxy)/pad      # lower y-axis limit - expressions equal to min(y)-(amp/pad), where amp = max(y)-min(y)
-    axylim2 = ((pad+1)*maxy-miny)/pad      # upper y-axis limit - expressions equal to max(y)+(amp/pad), where amp = max(y)-min(y)
-    return axylim1, axylim2
-
-# masks all points in values, apart from the first and last, so that they may be plotted invisible
-def mask_all(values):
-    m = repeat(True, len(values))
-    m[0], m[-1] = False, False
-    return masked_where(m, array(values))
-
-# masks all zeros in 'values'
-def mask_zeros(values):
-    v = array(values)
-    m = ~make_mask(v)
-    return masked_where(m, v)
-
-# returns a reasonably formatted list of times corresponding to the time period between the given timestamps
-def reasonable_times(times, zero_index=-1):
-    delta = times[-1] - times[0]                                # data period in milliseconds
-    time_label, divider = _appropriate_time_interval_(delta)    # compute reasonable scale for x axis
-    times = (array(times) - times[zero_index])/divider          # rescale x values
-    return times, time_label
-
-# returns the interval name and scale factor for the given time delta (in milliseconds)
-# only used by reasonable_times(), don't worry about it
-def _appropriate_time_interval_(delta):
-    if delta < 1e7:
-        return ('minutes', 6e4)       # no. milliseconds in a minute
-    elif delta < 2*1e8:
-        return ('hours', 3.6e6)       # no. milliseconds in an hour
-    elif delta < 2*1e9:
-        return ('days', 8.64e7)       # no. milliseconds in a day
-    elif delta < 1e10:
-        return ('weeks', 6.048e8)     # no. milliseconds in a week
-    else:
-        return ('months', 2.6298e9)   # no. milliseconds in a month
-    return
-
-#------------------------------------------------------------------------------------------------------------
-# USER FUNCTIONS
-
-# plots the given timeprices with optional line of best fit, percentage axis, amplitude, and legend
-def plot(timeprices, symbol='', show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
-    fig, axes = get_subplot_arrangement(1, figsize)                                                       # get a figure with a single subplot
-    axplot(axes[0], timeprices, symbol, show_best_fit, show_percentage, show_amplitude, show_legend)      # plot the timeprice data on the one subplot
-    fig.tight_layout()                                                                                    # make it tight
-    return
-
-# plots the given set of symbol:timeprice stored in Timeprices with optional line of best fit, percentage axis, amplitude, and legend
-def plot_multiple(Timeprices, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
-    assert len(Timeprices) <= lsad, "Too many symbols - must be no more than {}".format(lsad)
-    fig, axes = get_subplot_arrangement(len(Timeprices), figsize)                                                # get a figure with the correct number of subplots
-    for symbol, ax in zip(Timeprices,axes):                                                                      # associate each symbol in Timeprices with a subplot and iterate through the pairs
-        axplot(ax, Timeprices[symbol], symbol, show_best_fit, show_percentage, show_amplitude, show_legend)      # plot the timeprice data on its corresponding subplot
-    fig.tight_layout()                                                                                           # make it tight
-    return
-
-# plots the 'subplots' most volatile USDT/BUSD symbols and returns the clipped percentage volatility for all USDT/BUSD symbols
-# SHOULD PROBABLY SEPARATE THE TIMEPRICE AND VOLATILITY CALCULATIONS INTO SEPARATE FUNCTIONS
-def plot_most_volatile(subplots=9, timeprices=None, interval='1m', start=minutes_ago(60), end=None, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
-    print("COMPUTING SYMBOL VOLATILITY...")
-    end = end if end else now()
-    symbols = get_hos_usd_symbols()
-    Timeprices = timeprices if any([timeprices]) else get_historical_prices_multi(symbols, interval, start, end)
-    vols = dsort_descending({symbol:volatility_percentage_clipped(list(Timeprices[symbol].keys()), list(Timeprices[symbol].values())) for symbol in Timeprices})
-    plot_vols(vols, Timeprices, subplots, show_best_fit, show_percentage, show_amplitude, show_legend, figsize)
-    return vols
-
-def plot_vols(vols, tps, subplots=9, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
-    fig, axes = get_subplot_arrangement(subplots, figsize)
-    for symbol, ax in zip(list(vols)[:subplots],axes):                 # associate the first 'subplot' symbols in vols each with a subplot and iterate through the pairs
-        axplot(ax, tps[symbol], symbol, show_legend=False)      # plot the timeprice data on its corresponding subplot
-    fig.tight_layout()                                                 # make it tight
-    plt.show()
-
-# plots a histogram of the given data sequence
-def histogram(seq, bins='auto', rwidth=0.8, title=''):
-    hist_output = plt.hist(seq, bins=bins, rwidth=rwidth)
-    fig = plt.gcf()
-    fig.set_size_inches(9, 6)
-    plt.title(title)
-    plt.show()
-    return hist_output
 
 #========================================================================================================================================================================================
 # ACCOUNT & API
