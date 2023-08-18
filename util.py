@@ -1,7 +1,7 @@
 from keys import repo_path
 from config import bad_symbols
 from request import send_public_request, send_signed_request
-from typing import Any
+from typing import Any, Tuple
 from matplotlib import pyplot as plt
 from datetime import datetime as dt
 from time import time as current_time
@@ -1177,7 +1177,8 @@ def divide_array(arr:array, length:int) -> list:
 # INTERNAL FUNCTIONS
 
 # the grid dimensions for each subplot arrangement
-subplot_arrangement_dimensions = {1:(1,1), 2:(1,2), 3:(2,2), 4:(2,2), 5:(2,3), 6:(2,3), 7:(3,3), 8:(3,3), 9:(3,3)}
+subplot_arrangement_dimensions = {1:(1,1), 2:(1,2), 3:(2,2), 4:(2,2), 5:(2,3),
+                                  6:(2,3), 7:(3,3), 8:(3,3), 9:(3,3)}
 lsad = len(subplot_arrangement_dimensions)
 
 # the figsize for each subplot arrangement
@@ -1187,23 +1188,58 @@ subplot_arrangement_figsizes = {1:array([6,5]),
                                 5:array([11,6]), 6:array([11,6]),
                                 7:array([11,8]), 8:array([11,8]), 9:array([11,8])}
 
-# get a predetermined arrangement of subplots
-def get_subplot_arrangement(subplots, figsize=None, dpi=None, scale=1, fontsize=None):
-    assert isinstance(subplots, int) and 0 < subplots <= lsad, "'subplots' must be an integer from 1 to {}".format(lsad)
-    figsize = figsize if figsize else subplot_arrangement_figsizes[subplots]*scale          # determine figure size - either passed into function call or default retrieved from global variable
-    if isinstance(fontsize,(int,float)):                                                    # change the fontsize if a number was given
-        plt.rcParams.update({'font.size': fontsize})                                        # change font size
-    dim = subplot_arrangement_dimensions[subplots]                                          # get subplot grid dimensions
-    fig = plt.figure(figsize=figsize, dpi=dpi)                   # initialise figure
-    axes = []                                                    # initialise list to contain subplots
-    i = 0                                                        # variable i is used to determine if the specified number of subplots have been created
-    for row in range(dim[0]):                                    # iterate through number of rows specified by the dimension
-        for column in range(dim[1]):                             # for each row, iterate through number of columns specified by the dimension
-            axes.append(plt.subplot2grid(dim,(row,column)))      # create an empty subplot at this position in the figure
-            i += 1                                               # increment i
+def get_subplot_arrangement(subplots:int, figsize:tuple=None, dpi:int=None, scale:float=1, fontsize:float=None) -> Tuple[plt.figure, list]:
+    """
+    Returns a figure and a list of axes of number determined by subplots
+
+    Parameters
+    ----------
+    subplots : int
+        The number of subplots in the figure returned in axes
+    figsize : tuple, optional
+        Tuple containing the x and y dimensions of the figure, respectively
+        The default is None.
+    dpi : int, optional
+        The dpi of the figure
+        The default is None
+    scale : float, optional
+        The scale factor of the figure
+        Can be used to scale the size of the figure without specifying explicit
+        dimensions
+        The default is 1
+    fontsize : float, optional
+        The size of the text font in the figure elements
+        The default is None
+
+    Raises
+    ------
+    ValueError
+        If subplots is not an integer from 1 to lsad
+
+    Returns
+    -------
+    fig : pyplot.figure
+        The figure onto which subplots are plotted
+    axes : list
+        The list of subplots for figure
+    """
+
+    if not (isinstance(subplots, int) and 0 < subplots <= lsad):
+        raise ValueError("subplots must be an integer from 1 to {}".format(lsad))
+    figsize = figsize if figsize else subplot_arrangement_figsizes[subplots]*scale
+    if isinstance(fontsize,(int,float)):
+        plt.rcParams.update({'font.size': fontsize})
+    dim = subplot_arrangement_dimensions[subplots]
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    axes = []
+    i = 0
+    for row in range(dim[0]):
+        for column in range(dim[1]):
+            axes.append(plt.subplot2grid(dim,(row,column)))
+            i += 1
             if i == subplots:
-                break                                            # break the loop once the specified number of subplots has been created
-    return fig, axes                                             # return the figure and the list of subplots axes
+                break
+    return (fig, axes)
 
 # plot timeprice data onta a given subplot axis
 def axplot(ax, timeprices, symbol, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
