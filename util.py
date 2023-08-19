@@ -1179,6 +1179,8 @@ def divide_array(arr:array, length:int) -> list:
 # the grid dimensions for each subplot arrangement
 subplot_arrangement_dimensions = {1:(1,1), 2:(1,2), 3:(2,2), 4:(2,2), 5:(2,3),
                                   6:(2,3), 7:(3,3), 8:(3,3), 9:(3,3)}
+
+# the number of defined subplot arrangements
 lsad = len(subplot_arrangement_dimensions)
 
 # the figsize for each subplot arrangement
@@ -1191,6 +1193,8 @@ subplot_arrangement_figsizes = {1:array([6,5]),
 def get_subplot_arrangement(subplots:int, figsize:tuple=None, dpi:int=None, scale:float=1, fontsize:float=None) -> Tuple[plt.figure, list]:
     """
     Returns a figure and a list of axes of number determined by subplots
+
+    Intended mainly for internal use, not for users
 
     Parameters
     ----------
@@ -1241,11 +1245,14 @@ def get_subplot_arrangement(subplots:int, figsize:tuple=None, dpi:int=None, scal
                 break
     return (fig, axes)
 
-# plot timeprice data onta a given subplot axis
 def axplot(ax, timeprices, symbol, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+    """
+    Plots timeprice data onto the axis ax
+    Intended for internal use only
+    """
     # data preparation
-    times, prices = zip(*timeprices.items())                                                         # timeprice separation
-    times, time_label = reasonable_times(times)                                                      # get reasonably formatted times with a time label
+    times, prices = zip(*timeprices.items())
+    times, time_label = reasonable_times(times)
     if symbol:
         base, quote = split_symbol(symbol)
         title_symbol = base+'-'+quote
@@ -1253,71 +1260,154 @@ def axplot(ax, timeprices, symbol, show_best_fit=True, show_percentage=True, sho
     else:
         title_symbol, price_symbol = '[SYMBOL]', 'SYMBOL'
     # main axis
-    ax.plot(times, prices, label='Absolute Price', color='tab:blue')               # plot absoulte price line
-    ax.set_title(title_symbol+' Price')                                                              # set plot title
-    ax.set_xlabel("Time ({})".format(time_label))                                                    # set x-axis label
-    ax.set_ylabel("Price ({})".format(price_symbol))                                                 # set y-axis label
-    ax.set_xlim(times[0], 0)                                                                         # set x-axis limits
-    axylim1, axylim2 = get_y_axis_limits(prices)                                                     # compute y-axis limits
-    ax.set_ylim(axylim1, axylim2)                                                                    # set y-axis limits
+    ax.plot(times, prices, label='Absolute Price', color='tab:blue')
+    ax.set_title(title_symbol+' Price')
+    ax.set_xlabel("Time ({})".format(time_label))
+    ax.set_ylabel("Price ({})".format(price_symbol))
+    ax.set_xlim(times[0], 0)
+    axylim1, axylim2 = get_y_axis_limits(prices)
+    ax.set_ylim(axylim1, axylim2)
     # best fit
     if show_best_fit:
-         ax.plot(times, best_fit(times, prices), label="Av. Price", color='tab:orange')      # plot best fit line
+         ax.plot(times, best_fit(times, prices), label="Av. Price", color='tab:orange')
     # percentage axis
     if show_percentage:
-        percentage_prices = percentage_array(array(prices), prices[0])    # compute percentage changes in the absolute prices relative to the first price
-        p_mask = mask_all(percentage_prices)                             # mask the percentage prices i.e. make them invisible
-        ax2 = ax.twinx()                                                 # create secondary y-axis
-        ax2.plot(times, p_mask)                                          # plot masked percentage prices
-        ax2.set_ylabel("% Change")                                       # set secondary y-axis label
-        ax2ylim1, ax2ylim2 = get_y_axis_limits(percentage_prices)        # compute secondary y-axis limits
-        ax2.set_ylim(ax2ylim1, ax2ylim2)                                 # set secondary y-axis limits
-        ax2.grid(axis='y')                                               # add horizontal grid lines at the percentage ticks
-        ax.set_zorder(ax2.get_zorder()+1)                                # plot percentage axis elements behind main axis (including grid lines)
-        ax.set_frame_on(False)                                           # needed to make the percentage axis elements visible after setting the z-order
+        percentage_prices = percentage_array(array(prices), prices[0])
+        p_mask = mask_all(percentage_prices)    # makes percentage prices invisible
+        ax2 = ax.twinx()
+        ax2.plot(times, p_mask)
+        ax2.set_ylabel("% Change")
+        ax2ylim1, ax2ylim2 = get_y_axis_limits(percentage_prices)
+        ax2.set_ylim(ax2ylim1, ax2ylim2)
+        ax2.grid(axis='y')
+        ax.set_zorder(ax2.get_zorder()+1)
+        ax.set_frame_on(False)    # needed to make percentage axis elements visible after setting z-order
     else:
-        ax.grid(axis='y')                                                # add horizontal grid lines at the absolute price ticks if not using a percentage axis
+        ax.grid(axis='y')
     # amplitude
     if show_amplitude:
-        amp = amplitude(prices)                                                                                                      # compute amplitdue
-        ax.plot(times, array(best_fit(times, prices))+amp, label="Amplitude", color='tab:green', linestyle='dashed')      # plot upper amplitude line
-        ax.plot(times, array(best_fit(times, prices))-amp, color='tab:green', linestyle='dashed')                         # plot lower amplitude line
+        amp = amplitude(prices)
+        ax.plot(times, array(best_fit(times, prices))+amp, label="Amplitude", color='tab:green', linestyle='dashed')
+        ax.plot(times, array(best_fit(times, prices))-amp, color='tab:green', linestyle='dashed')
     # legend
     if show_legend:
-        ax.legend()       # show a legend
+        ax.legend()
     return
 
-# returns a tuple containing the lower and upper y-axis limits, respectively, for the given y values
-# smaller pad gives more padding (I know it's confusing)
-def get_y_axis_limits(y, pad=10):
-    miny = min(y)                                                              # compute lowest price (to set the y-axis limit)
-    maxy = max(y)                                                              # compute highest price (to set the y-axis limit)
-    axylim1 = ((pad+1)*miny-maxy)/pad      # lower y-axis limit - expressions equal to min(y)-(amp/pad), where amp = max(y)-min(y)
-    axylim2 = ((pad+1)*maxy-miny)/pad      # upper y-axis limit - expressions equal to max(y)+(amp/pad), where amp = max(y)-min(y)
+def get_y_axis_limits(y:array, pad:float=10) -> Tuple[float, float]:
+    """
+    Returns a tuple containing the lower and upper y-axis limits, respectively,
+    for the given y values, with padding determined by pad
+
+    pad determines the fraction of the original total height of the data to pad
+    the highest and lowest points from the axis
+    Smaller pad gives more padding (I know it's confusing)
+
+    Parameters
+    ----------
+    y : array
+        Array-like object containing the y-axis values
+    pad : float, optional
+        The fraction of the total height to pad from the top and bottom
+        The default is 10
+
+    Returns
+    -------
+    Tuple[float, float]
+        lower and upper padded y-axis limits, respectively
+    """
+
+    miny = min(y)
+    maxy = max(y)
+    padding = (maxy-miny)/pad
+    axylim1 = miny - padding    # lower y-axis limit
+    axylim2 = maxy + padding    # upper y-axis limit
     return axylim1, axylim2
 
-# masks all points in values, apart from the first and last, so that they may be plotted invisible
-def mask_all(values):
+def mask_all(values:array) -> array:
+    """
+    Masks all points in the array values, apart from the first and last, so
+    that they may be plotted invisible
+
+    Parameters
+    ----------
+    values : array
+        Array-like object containing the data-series to mask
+
+    Returns
+    -------
+    array
+        The masked data-series
+    """
+
     m = repeat(True, len(values))
     m[0], m[-1] = False, False
     return masked_where(m, array(values))
 
-# masks all zeros in 'values'
-def mask_zeros(values):
+def mask_zeros(values:array) -> array:
+    """
+    Masks all zeros in the array values so that they may be plotted invisible
+
+    Parameters
+    ----------
+    values : array
+        Array-like object containing the data-series whose zeros are to be
+        masked
+
+    Returns
+    -------
+    array
+        The masked data-series
+    """
+
     v = array(values)
     m = ~make_mask(v)
     return masked_where(m, v)
 
-# returns a reasonably formatted list of times corresponding to the time period between the given timestamps
-def reasonable_times(times, zero_index=-1):
+def reasonable_times(times:array, zero_index:int=-1) -> Tuple[array, str]:
+    """
+    Returns a reasonably formatted array of times corresponding to the time
+    period of the original array times and a string describing the time unit
+
+    Parameters
+    ----------
+    times : array
+        Array-like object containing unix timestamps in chronological order
+    zero_index : int, optional
+        The index of the array times corresponding to the element which is to
+        be considered time=0
+        The default is -1
+
+    Returns
+    -------
+    Tuple[array, str]
+        The new array of times and the string describing the time unit
+    """
+
     delta = times[-1] - times[0]                                # data period in milliseconds
     time_label, divider = _appropriate_time_interval_(delta)    # compute reasonable scale for x axis
-    times = (array(times) - times[zero_index])/divider          # rescale x values
+    times = (array(times) - times[zero_index])/divider
     return times, time_label
 
-# returns the interval name and scale factor for the given time delta (in milliseconds)
-# only used by reasonable_times(), don't worry about it
-def _appropriate_time_interval_(delta):
+def _appropriate_time_interval_(delta:int) -> Tuple[str, float]:
+    """
+    Returns the time unit and scale factor for the given time delta in
+    milliseconds
+
+    Intended only for internal use
+
+    Parameters
+    ----------
+    delta : TYPE
+        The period to scale to an appropriate time interval in milliseconds
+
+    Returns
+    -------
+    Tuple[str, float]
+        The time unit and scale factor for the given time delta in
+        milliseconds
+    """
+
     if delta < 1e7:
         return ('minutes', 6e4)       # no. milliseconds in a minute
     elif delta < 2*1e8:
@@ -1330,28 +1420,98 @@ def _appropriate_time_interval_(delta):
         return ('months', 2.6298e9)   # no. milliseconds in a month
     return
 
-#------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # USER FUNCTIONS
 
-# plots the given timeprices with optional line of best fit, percentage axis, amplitude, and legend
-def plot(timeprices, symbol='', show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
-    fig, axes = get_subplot_arrangement(1, figsize)                                                       # get a figure with a single subplot
-    axplot(axes[0], timeprices, symbol, show_best_fit, show_percentage, show_amplitude, show_legend)      # plot the timeprice data on the one subplot
-    fig.tight_layout()                                                                                    # make it tight
+def plot(timeprices:dict, symbol:str='', show_best_fit:bool=True, show_percentage:bool=True, show_amplitude:bool=True, show_legend:bool=True, figsize:tuple=None):
+    """
+    plots the given timeprices with optional line of best fit, percentage axis,
+    amplitude, and legend
+
+    Parameters
+    ----------
+    timeprices : dict
+        A dictionary containing timestamp:price key-value pairs
+    symbol : str, optional
+        The string of the name of the symbol associated with the timeprices
+        Used in figure labels
+        The default is ''
+    show_best_fit : bool, optional
+        Determines whether a line of best fit is shown
+        The default is True
+    show_percentage : bool, optional
+        determines whether a percentage axis is shown
+        The default is True
+    show_amplitude : bool, optional
+        Determines whether amplitude lines are shown
+        The default is True
+    show_legend : bool, optional
+        Determines whether a legend is shown
+        The default is True
+    figsize : tuple, optional
+        A tuple containing the figure dimensions
+        The default size is used if None is passed
+        The default is None
+
+    Returns
+    -------
+    None
+    """
+
+    fig, axes = get_subplot_arrangement(1, figsize)
+    axplot(axes[0], timeprices, symbol, show_best_fit, show_percentage, show_amplitude, show_legend)
+    fig.tight_layout()
     return
 
-# plots the given set of symbol:timeprice stored in Timeprices with optional line of best fit, percentage axis, amplitude, and legend
-def plot_multiple(Timeprices, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
-    assert len(Timeprices) <= lsad, "Too many symbols - must be no more than {}".format(lsad)
-    fig, axes = get_subplot_arrangement(len(Timeprices), figsize)                                                # get a figure with the correct number of subplots
-    for symbol, ax in zip(Timeprices,axes):                                                                      # associate each symbol in Timeprices with a subplot and iterate through the pairs
-        axplot(ax, Timeprices[symbol], symbol, show_best_fit, show_percentage, show_amplitude, show_legend)      # plot the timeprice data on its corresponding subplot
-    fig.tight_layout()                                                                                           # make it tight
+def plot_multiple(Timeprices:dict, show_best_fit:bool=True, show_percentage:bool=True, show_amplitude:bool=True, show_legend:bool=True, figsize:tuple=None):
+    """
+    Plots the given collection of timepriceswith optional line of best fit,
+    percentage axis, amplitude, and legend
+
+    Parameters
+    ----------
+    Timeprices : dict
+        A dictionary containing symbol:timeprices key-value pairs where
+        timeprices in each case is a dictionary containing timestamp:price
+        key-value pairs
+    show_best_fit : bool, optional
+        Determines whether a line of best fit is shown
+        The default is True
+    show_percentage : bool, optional
+        determines whether a percentage axis is shown
+        The default is True
+    show_amplitude : bool, optional
+        Determines whether amplitude lines are shown
+        The default is True
+    show_legend : bool, optional
+        Determines whether a legend is shown
+        The default is True
+    figsize : tuple, optional
+        A tuple containing the figure dimensions
+        The default size is used if None is passed
+        The default is None
+
+    Raises
+    ------
+    ValueError
+        If more timeprice collections than available subplots are passed
+
+    Returns
+    -------
+    None
+    """
+
+    if len(Timeprices) > lsad:
+        raise ValueError("Too many symbols - must be no more than {}".format(lsad))
+    fig, axes = get_subplot_arrangement(len(Timeprices), figsize)
+    for symbol, ax in zip(Timeprices,axes):
+        axplot(ax, Timeprices[symbol], symbol, show_best_fit, show_percentage, show_amplitude, show_legend)
+    fig.tight_layout()
     return
 
 # plots the 'subplots' most volatile USDT/BUSD symbols and returns the clipped percentage volatility for all USDT/BUSD symbols
 # SHOULD PROBABLY SEPARATE THE TIMEPRICE AND VOLATILITY CALCULATIONS INTO SEPARATE FUNCTIONS
-def plot_most_volatile(subplots=9, timeprices=None, interval='1m', start=minutes_ago(60), end=None, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+def plot_most_volatile(subplots=9, timeprices=None, interval='1m', start=minutes_ago(60), end=None, show_best_fit:bool=True, show_percentage:bool=True, show_amplitude:bool=True, show_legend:bool=True, figsize:tuple=None):
     print("COMPUTING SYMBOL VOLATILITY...")
     end = end if end else now()
     symbols = get_hos_usd_symbols()
@@ -1360,7 +1520,7 @@ def plot_most_volatile(subplots=9, timeprices=None, interval='1m', start=minutes
     plot_vols(vols, Timeprices, subplots, show_best_fit, show_percentage, show_amplitude, show_legend, figsize)
     return vols
 
-def plot_vols(vols, tps, subplots=9, show_best_fit=True, show_percentage=True, show_amplitude=True, show_legend=True, figsize=None):
+def plot_vols(vols, tps, subplots=9, show_best_fit:bool=True, show_percentage:bool=True, show_amplitude:bool=True, show_legend:bool=True, figsize:tuple=None):
     fig, axes = get_subplot_arrangement(subplots, figsize)
     for symbol, ax in zip(list(vols)[:subplots],axes):                 # associate the first 'subplot' symbols in vols each with a subplot and iterate through the pairs
         axplot(ax, tps[symbol], symbol, show_legend=False)      # plot the timeprice data on its corresponding subplot
